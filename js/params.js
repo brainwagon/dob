@@ -13,6 +13,9 @@ export const PARAM_DEFS = [
   { key: 'bearing_width',    label: 'Bearing width',      min: 0.5, max: 4,   step: 0.25, value: 1,     unit: 'in' },
   { key: 'bolt_circle_radius',label: 'Bolt circle radius',min: 0.5, max: 6,   step: 0.125,value: 3,     unit: 'in' },
   { key: 'finger_count',     label: 'Box-joint fingers',  min: 3,   max: 11,  step: 2,    value: 5,     unit: 'per edge' },
+  { key: 'rocker_edge_margin',  label: 'Rocker edge margin',  min: 0.5, max: 5,  step: 0.125, value: 2,     unit: 'in' },
+  { key: 'cradle_tolerance',    label: 'Cradle fit gap',      min: 0,   max: 0.5,step: 0.0625,value: 0.125, unit: 'in' },
+  { key: 'bearing_pad_clearance',label: 'Bearing saddle gap', min: 0,   max: 0.5,step: 0.02,  value: 0.12,  unit: 'in' },
 ];
 
 // Discrete (non-slider) choices, rendered as selects.
@@ -24,10 +27,7 @@ export const CHOICE_DEFS = [
 export const CONSTANTS = {
   bolt_clearance: 0.266,   // 1/4" bolt clearance hole
   pivot_hole: 0.3125,      // 5/16" azimuth pivot
-  cradle_tolerance: 0.125, // total side-to-side gap: rocker interior = cradle width + this
-  rocker_depth_factor: 1.6,// rocker fore-aft length = factor * bearing_dia [FLAGGED default]
   pad_thickness: 0.25,     // teflon pad height (azimuth)                  [FLAGGED default]
-  bearing_pad_clearance: 0.12, // gap between bearing rim and the wood arc; pads bridge it [FLAGGED default]
   foot_radius: 0.75,       // ground-board foot radius
   foot_height: 1.0,
   tab_count: 5,            // odd → flush ends; tabs along each side/front bottom edge into the disk

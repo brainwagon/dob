@@ -96,6 +96,13 @@ bearing_separation  = tube_OD + 2t                     # DERIVED, tied to tube w
   `√(((tube_OD/2)+t)² ... )` wider than the tube. Handled by the interference check, not a
   formula.
 
+**Rocker side fore-aft width (derived 2026-06-24):** the side panel must contain the
+bearing saddle, whose mouth half-width is `xi = √((Rb+clr)² − (Rb·cosθ)²)`. So
+`rockerDepth = 2·xi + 2·rocker_edge_margin` — leaving `rocker_edge_margin` (flagged
+default, 2") of solid wood beyond each end of the saddle. This replaced an earlier
+unjustified `1.6 × bearing_diameter` heuristic; the dependency on bearing size is real
+(the saddle scales with `Rb`) but is now explicit rather than a magic multiplier.
+
 **Underspecified, needs a default before coding (see Open items):** rocker side-clearance
 constant (rocker inner width vs cradle), rocker bottom disk diameter rule, feet placement
 radius.
@@ -191,6 +198,8 @@ output consistently.
 - **Below-horizon aiming** — undecided; affects `front_board_height` (may go negative).
 - **Nesting** — rejected; one DXF per part.
 - **Eyepiece-height ergonomics** — acknowledged, currently unconstrained.
+- **Rocker side width** — now derived from the saddle (`2·xi + 2·rocker_edge_margin`),
+  replacing the old `1.6 × bearing_diameter` guess (2026-06-24).
 - **Defaults still needed:** rocker side-clearance constant, rocker bottom disk diameter
   rule, feet placement radius.
 - **tube_length** — decide: direct input vs derived from focal length + allowance.

@@ -86,10 +86,18 @@ export function deriveDimensions(p) {
   const bearingSep = D + 2 * t;               // derived, tied to tube width
 
   // rocker interior = cradle width + tolerance; sides and front panel both use this.
-  const tol = CONSTANTS.cradle_tolerance;
+  const tol = p.cradle_tolerance;
   const rockerInnerWidth = cradleOuter + tol;
   const rockerInnerHalf = rockerInnerWidth / 2;
-  const rockerDepth = p.bearing_diameter * CONSTANTS.rocker_depth_factor;
+  // Rocker side fore-aft width is DERIVED from the bearing saddle it must contain.
+  // The saddle (radius Rcut = Rb+clr, centred on the altitude axis at height Rb·cosθ
+  // above the top edge) opens to a half-width `xi` where the cut arc meets the top edge:
+  //     xi = √( Rcut² − (Rb·cosθ)² )
+  // The board must span that mouth (2·xi) plus solid material beyond each end (edge_margin),
+  // so the saddle is fully captured and there is wood around the pads.
+  const clr = p.bearing_pad_clearance, Rcut = Rb + clr;
+  const xi = Math.sqrt(Math.max(0, Rcut * Rcut - axisAboveTop * axisAboveTop));
+  const rockerDepth = 2 * xi + 2 * p.rocker_edge_margin;
   const halfDiag = Math.hypot(rockerDepth / 2, rockerInnerHalf + t);
   const rockerBottomRadius = halfDiag + 0.5;
   const groundRadius = rockerBottomRadius;
@@ -166,7 +174,7 @@ export function buildModel(p) {
 
   // sides: thickness along X, bearing saddle in the top edge, tabs in the bottom edge.
   const sideProfile = rockerSideProfile(d.rockerDepth, d.Hside, d.Rb, d.theta,
-                                        CONSTANTS.bearing_pad_clearance, d.warnings, tab, sideFront, d.frontH);
+                                        p.bearing_pad_clearance, d.warnings, tab, sideFront, d.frontH);
   for (const s of [1, -1]) {
     board(`rocker_side_${s > 0 ? 'R' : 'L'}`, 'az', sideProfile, [],
           [s * sideCenterX, d.Hside / 2, 0], [0, Math.PI / 2, 0]);
