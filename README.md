@@ -10,6 +10,12 @@ The optical/tube math (aperture, focal length, spacing) is assumed solved elsewh
 
 ![Dobsonian Designer screenshot](docs/screenshot.png)
 
+> ⚠️ **Warning.** This project was created using [Claude Code](https://claude.com/claude-code).
+> The generated DXF files have **not** been tested in a real CAD/CAM application or used to
+> cut actual parts. Treat all output as unverified: open the DXFs in your own software,
+> check every dimension, and cut test pieces before trusting them. No warranty — see
+> [LICENSE](LICENSE).
+
 ## Features
 
 - **Parametric geometry** — tube cradle, three-sided rocker box with a circular bearing
