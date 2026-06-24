@@ -1,7 +1,7 @@
 // UI wiring: build sliders from PARAM_DEFS, rebuild the model on change, show derived
 // dimensions + warnings, and drive the altitude/azimuth sliders.
 
-import { PARAM_DEFS, CHOICE_DEFS, defaultParams } from './params.js';
+import { PARAM_DEFS, CHOICE_DEFS, PARAM_GROUPS, defaultParams } from './params.js';
 import { buildModel } from './geometry.js';
 import { Viewer } from './viewer.js';
 import { partToDXF } from './dxf.js';
@@ -116,8 +116,8 @@ for (const g of VIS_GROUPS) {
   visBox.appendChild(label);
 }
 
-// discrete choices (selects)
-for (const def of CHOICE_DEFS) {
+// parameter controls, rendered under group subheadings in PARAM_GROUPS order.
+function renderChoice(def) {
   const wrap = document.createElement('div');
   wrap.className = 'ctl';
   wrap.innerHTML = `<label>${def.label}</label>
@@ -126,9 +126,7 @@ for (const def of CHOICE_DEFS) {
   sel.addEventListener('change', () => { params[def.key] = sel.value; rebuild(); saveState(); });
   controls.appendChild(wrap);
 }
-
-// parameter sliders
-for (const def of PARAM_DEFS) {
+function renderSlider(def) {
   const wrap = document.createElement('div');
   wrap.className = 'ctl';
   wrap.innerHTML = `<label>${def.label} <output></output></label>
@@ -138,6 +136,17 @@ for (const def of PARAM_DEFS) {
   input.addEventListener('input', () => { params[def.key] = +input.value; sync(); rebuild(); saveState(); });
   sync();
   controls.appendChild(wrap);
+}
+for (const group of PARAM_GROUPS) {
+  const choices = CHOICE_DEFS.filter(d => d.group === group);
+  const sliders = PARAM_DEFS.filter(d => d.group === group);
+  if (!choices.length && !sliders.length) continue;
+  const h = document.createElement('div');
+  h.className = 'group-head';
+  h.textContent = group;
+  controls.appendChild(h);
+  choices.forEach(renderChoice);
+  sliders.forEach(renderSlider);
 }
 
 // pose sliders (restored from saved state)
