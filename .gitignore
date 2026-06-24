@@ -1,0 +1,10 @@
+# OS / editor cruft
+.DS_Store
+*.swp
+*~
+
+# logs and scratch
+*.log
+
+# Claude Code tooling/config (not part of the project)
+.claude/

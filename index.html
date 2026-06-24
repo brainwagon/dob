@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dobsonian Designer — geometry viewer</title>
+<style>
+  :root { --bg:#1a1d22; --panel:#22262d; --line:#333a44; --txt:#d8dde3; --mut:#8a94a2; --accent:#3a7bd5; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--txt);
+    font: 13px/1.45 system-ui, sans-serif; }
+  #app { display: grid; grid-template-columns: 300px 1fr; height: 100vh; }
+  #panel { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 14px; }
+  #panel h1 { font-size: 15px; margin: 0 0 2px; }
+  #panel .sub { color: var(--mut); margin: 0 0 14px; font-size: 11px; }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--mut);
+    margin: 18px 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .ctl { margin-bottom: 10px; }
+  .ctl label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+  .ctl output { color: var(--accent); }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  select { width: 100%; background: #2c333d; color: var(--txt); border: 1px solid var(--line);
+    border-radius: 4px; padding: 4px; }
+  .vis { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
+  .vis label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+  .vis input { accent-color: var(--accent); }
+  #display { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #display label { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; }
+  #display input { accent-color: var(--accent); }
+  #display button { background: #2c333d; color: var(--txt); border: 1px solid var(--line);
+    border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 11px; }
+  #display button:hover { border-color: var(--accent); }
+  #export button { width: 100%; background: var(--accent); color: #fff; border: none;
+    border-radius: 4px; padding: 8px; cursor: pointer; font-size: 12px; }
+  #export button:hover { filter: brightness(1.1); }
+  #export .note { color: var(--mut); font-size: 11px; margin-top: 6px; }
+  .d-row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .d-row span:last-child { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .warn { color: #ffb454; padding: 3px 0; }
+  .ok { color: #5fd08a; padding: 3px 0; }
+  #view { width: 100%; height: 100%; display: block; }
+  .poses { display: flex; gap: 6px; margin: 6px 0 10px; }
+  .poses button { flex: 1; background: #2c333d; color: var(--txt); border: 1px solid var(--line);
+    border-radius: 4px; padding: 5px; cursor: pointer; font-size: 11px; }
+  .poses button:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1>Dobsonian Designer</h1>
+    <p class="sub">Single-source geometry · 3D correctness viewer</p>
+
+    <h2>Pose</h2>
+    <div class="ctl"><label>Altitude <output id="altOut">45°</output></label>
+      <input id="alt" type="range" min="0" max="90" step="1" value="45"></div>
+    <div class="poses">
+      <button data-alt="0">Horizon</button>
+      <button data-alt="45">45°</button>
+      <button data-alt="90">Zenith</button>
+    </div>
+    <div class="ctl"><label>Azimuth <output id="azOut">0°</output></label>
+      <input id="az" type="range" min="-180" max="180" step="1" value="0"></div>
+
+    <h2>Visibility</h2>
+    <div id="visibility"></div>
+
+    <h2>Display</h2>
+    <div id="display"></div>
+
+    <h2>Export</h2>
+    <div id="export"></div>
+
+    <h2>Parameters</h2>
+    <div id="controls"></div>
+
+    <h2>Derived (§4)</h2>
+    <div id="derived"></div>
+
+    <h2>Warnings</h2>
+    <div id="warnings"></div>
+  </div>
+  <canvas id="view"></canvas>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
