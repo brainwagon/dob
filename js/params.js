@@ -22,6 +22,7 @@ export const PARAM_DEFS = [
   { key: 'cradle_length',    group: 'Balance & clearance', label: 'Cradle length',      min: 4,   max: 30,  step: 0.25, value: 10,    unit: 'in' },
   // Joinery
   { key: 'finger_count',     group: 'Joinery', label: 'Box-joint fingers',  min: 3,   max: 11,  step: 2,    value: 5,     unit: 'per edge' },
+  { key: 'corner_size',      group: 'Joinery', label: 'Top corner size',    min: 0.125, max: 3, step: 0.125, value: 0.5,   unit: 'in' },
   // Fit & tolerances
   { key: 'rocker_edge_margin',  group: 'Fit & tolerances', label: 'Rocker edge margin',  min: 0.5, max: 5,  step: 0.125, value: 2,     unit: 'in' },
   { key: 'cradle_tolerance',    group: 'Fit & tolerances', label: 'Cradle fit gap',      min: 0,   max: 0.5,step: 0.0625,value: 0.125, unit: 'in' },
@@ -31,6 +32,7 @@ export const PARAM_DEFS = [
 // Discrete (non-slider) choices, rendered as selects within their group.
 export const CHOICE_DEFS = [
   { key: 'joint_type', group: 'Joinery', label: 'Corner joints', value: 'box', options: ['box', 'butt'] },
+  { key: 'corner_style', group: 'Joinery', label: 'Top corner style', value: 'fillet', options: ['off', 'chamfer', 'fillet'] },
 ];
 
 // Non-slider constants (fixed defaults from the spec / flagged underspecified items).

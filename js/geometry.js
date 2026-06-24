@@ -30,6 +30,27 @@ function circle(r, seg = 64) {
   return pts;
 }
 
+// Replace a sharp convex corner at C with a chamfer or fillet, staying in the outline.
+// dirIn = unit travel direction arriving at C; dirOut = unit travel direction leaving C.
+// For a 90° corner the tangent points sit `size` back along each edge. Returns the points
+// to emit in place of C (just [C] when style is 'off').
+function treatCorner(C, dirIn, dirOut, style, size) {
+  if (style === 'off' || size <= 0) return [C];
+  const T1 = [C[0] - dirIn[0] * size, C[1] - dirIn[1] * size];
+  const T2 = [C[0] + dirOut[0] * size, C[1] + dirOut[1] * size];
+  if (style === 'chamfer') return [T1, T2];
+  // fillet: quarter arc of radius `size`, centre offset into the interior (left of travel).
+  const n = [-dirIn[1], dirIn[0]];                 // CCW interior normal
+  const O = [T1[0] + n[0] * size, T1[1] + n[1] * size];
+  let a1 = Math.atan2(T1[1] - O[1], T1[0] - O[0]);
+  let a2 = Math.atan2(T2[1] - O[1], T2[0] - O[0]);
+  let d = a2 - a1; while (d <= 0) d += Math.PI * 2; // CCW sweep (= +90° here)
+  const seg = 8, out = [T1];
+  for (let i = 1; i < seg; i++) { const a = a1 + d * (i / seg); out.push([O[0] + size * Math.cos(a), O[1] + size * Math.sin(a)]); }
+  out.push(T2);
+  return out;
+}
+
 // Rocker side board: a W×H rectangle with a circular saddle (radius Rcut = Rb+clr)
 // bitten out of the top edge so the round bearing nests in; the Teflon pads bridge
 // the `clr` gap at ±θ. The arc is part of the OUTLINE, so it flows to the DXF.
@@ -38,16 +59,29 @@ function circle(r, seg = 64) {
 // (local x = −W/2) is the rocker FRONT; `frontFinger` cuts box-joint notches into it over
 // the lower `frontH` (where the front board overlaps), straight above. `tab` adds disk
 // tabs to the bottom edge.
-function rockerSideProfile(W, H, Rb, theta, clr, warnings, tab, frontFinger, frontH) {
+function rockerSideProfile(W, H, Rb, theta, clr, warnings, tab, frontFinger, frontH, corner) {
   const Cy = H / 2 + Rb * Math.cos(theta);   // arc centre = altitude axis, above the top edge
   const Rcut = Rb + clr;
   let xi = Math.sqrt(Math.max(0, Rcut * Rcut - Math.pow(Rb * Math.cos(theta), 2)));
   if (xi >= W / 2) { warnings.push('Altitude bearing wider than rocker side — saddle clipped.'); xi = W * 0.49; }
+  // Top-corner treatment, clamped per corner. Horizontal room is the top run beside the
+  // saddle (both corners). Vertical room differs: the right (back) edge is full-height; the
+  // left (front) edge can only be treated above where the front board / its fingers begin.
+  const cStyle = corner ? corner.style : 'off';
+  const reqSize = corner ? corner.size : 0;
+  const topRun = W / 2 - xi;
+  const yTop = frontFinger && frontH > 0 ? -H / 2 + frontH : -H / 2;
+  const sizeR = Math.min(reqSize, topRun, H / 2);
+  const sizeL = Math.min(reqSize, topRun, H / 2 - yTop);
+  if (cStyle !== 'off' && (sizeR < reqSize || sizeL < reqSize))
+    warnings.push(`Top corner size clamped to ${Math.min(sizeR, sizeL).toFixed(2)}".`);
   // bottom edge: tabs into the disk (if requested), else straight
   const bottom = tab
     ? crenellate([-W / 2, -H / 2], [W / 2, -H / 2], [0, 1], tab.count, tab.phase, tab.depth, 'tab')
     : [[-W / 2, -H / 2], [W / 2, -H / 2]];
-  const pts = [...bottom, [W / 2, H / 2], [xi, H / 2]];
+  // top-right corner: arrive going +Y (right edge), leave going −X (top edge)
+  const topR = treatCorner([W / 2, H / 2], [0, 1], [-1, 0], cStyle, sizeR);
+  const pts = [...bottom, ...topR, [xi, H / 2]];
   const aR = Math.atan2(H / 2 - Cy, xi);     // right intersection angle (4th quadrant)
   const aL = Math.atan2(H / 2 - Cy, -xi);    // left intersection angle  (3rd quadrant)
   const seg = 48;                            // sweep aR → aL passing through the bottom (-π/2)
@@ -55,10 +89,10 @@ function rockerSideProfile(W, H, Rb, theta, clr, warnings, tab, frontFinger, fro
     const a = aR + (aL - aR) * (i / seg);
     pts.push([Rcut * Math.cos(a), Cy + Rcut * Math.sin(a)]);
   }
-  pts.push([-xi, H / 2], [-W / 2, H / 2]);    // top-left corner
+  // top-left corner: arrive going −X (top edge), leave going −Y (left/front edge)
+  pts.push([-xi, H / 2], ...treatCorner([-W / 2, H / 2], [-1, 0], [0, -1], cStyle, sizeL));
   // left (front) edge, descending: straight to the front-board top, then notched to the floor
   if (frontFinger && frontH > 0) {
-    const yTop = -H / 2 + frontH;
     pts.push([-W / 2, yTop]);
     const fe = crenellate([-W / 2, -H / 2], [-W / 2, yTop], [1, 0], frontFinger.count, frontFinger.phase, frontFinger.depth, 'box');
     fe.reverse();                            // generated from worldY=0; traverse top→bottom
@@ -175,8 +209,9 @@ export function buildModel(p) {
   const sideFront = corner ? { count: N, phase: 0, depth: t } : null;
 
   // sides: thickness along X, bearing saddle in the top edge, tabs in the bottom edge.
+  const cornerCfg = { style: p.corner_style, size: p.corner_size };
   const sideProfile = rockerSideProfile(d.rockerDepth, d.Hside, d.Rb, d.theta,
-                                        p.bearing_pad_clearance, d.warnings, tab, sideFront, d.frontH);
+                                        p.bearing_pad_clearance, d.warnings, tab, sideFront, d.frontH, cornerCfg);
   for (const s of [1, -1]) {
     board(`rocker_side_${s > 0 ? 'R' : 'L'}`, 'az', sideProfile, [],
           [s * sideCenterX, d.Hside / 2, 0], [0, Math.PI / 2, 0]);
