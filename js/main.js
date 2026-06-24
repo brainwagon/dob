@@ -1,7 +1,7 @@
 // UI wiring: build sliders from PARAM_DEFS, rebuild the model on change, show derived
 // dimensions + warnings, and drive the altitude/azimuth sliders.
 
-import { PARAM_DEFS, CHOICE_DEFS, PARAM_GROUPS, defaultParams } from './params.js';
+import { PARAM_DEFS, CHOICE_DEFS, PARAM_GROUPS, HELP, defaultParams } from './params.js';
 import { buildModel } from './geometry.js';
 import { Viewer } from './viewer.js';
 import { partToDXF } from './dxf.js';
@@ -122,6 +122,7 @@ function renderChoice(def) {
   wrap.className = 'ctl';
   wrap.innerHTML = `<label>${def.label}</label>
     <select>${def.options.map(o => `<option ${o === params[def.key] ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+  if (HELP[def.key]) wrap.querySelector('label').title = HELP[def.key];
   const sel = wrap.querySelector('select');
   sel.addEventListener('change', () => { params[def.key] = sel.value; rebuild(); saveState(); });
   controls.appendChild(wrap);
@@ -131,6 +132,7 @@ function renderSlider(def) {
   wrap.className = 'ctl';
   wrap.innerHTML = `<label>${def.label} <output></output></label>
     <input type="range" min="${def.min}" max="${def.max}" step="${def.step}" value="${params[def.key]}">`;
+  if (HELP[def.key]) wrap.querySelector('label').title = HELP[def.key];
   const input = wrap.querySelector('input'), out = wrap.querySelector('output');
   const sync = () => { out.textContent = `${params[def.key]} ${def.unit}`; };
   input.addEventListener('input', () => { params[def.key] = +input.value; sync(); rebuild(); saveState(); });
@@ -163,6 +165,14 @@ azSlider.addEventListener('input', () => { azOut.textContent = azSlider.value + 
 // pose preset buttons (the three interference check poses)
 for (const b of document.querySelectorAll('[data-alt]')) {
   b.addEventListener('click', () => { altSlider.value = b.dataset.alt; altOut.textContent = b.dataset.alt + '°'; viewer.setAltitude(+b.dataset.alt); saveState(); });
+}
+
+// hover help for the static pose labels and panel section headings
+altOut.closest('label').title = HELP.alt;
+azOut.closest('label').title = HELP.az;
+for (const id of ['visibility', 'display', 'export']) {
+  const h = document.getElementById(id).previousElementSibling;
+  if (h && HELP[id]) h.title = HELP[id];
 }
 
 rebuild();
