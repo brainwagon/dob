@@ -8,7 +8,7 @@ tube swings, and exports **cut-ready DXF files** for the wooden parts.
 The optical/tube math (aperture, focal length, spacing) is assumed solved elsewhere
 (e.g. newt-web); this tool's value is the **mount structure → cut list / DXF**.
 
-![Dobsonian Designer screenshot](docs/screenshot.png)
+![Dobsonian Designer screenshot](docs/better-screenshot.png)
 
 > ⚠️ **Warning.** This project was created using [Claude Code](https://claude.com/claude-code).
 > The generated DXF files have **not** been tested in a real CAD/CAM application or used to
