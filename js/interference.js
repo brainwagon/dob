@@ -98,7 +98,7 @@ export function checkInterference(d) {
     prism('cradle', rect(d.cradleOuter, d.cradleOuter), d.Lc, 0, [0, 0, 0]),
     prism('tube', ngonCirc(d.D / 2, 16), d.L, 0, [0, 0, (1 - 2 * d.pf) * d.L / 2]),
   ];
-  const stat = [prism('bottom', ngonCirc(d.rockerBottomRadius, 24), d.t, -Math.PI / 2, [0, -d.t / 2, 0])];
+  const stat = [prism('bottom', ngonCirc(d.rockerBottomRadius, 24), d.tBase, -Math.PI / 2, [0, -d.tBase / 2, 0])];
   if (d.frontH > 0)
     stat.push(prism('front board', rect(d.rockerInnerWidth, d.frontH), d.t, 0,
                     [0, d.frontH / 2, d.rockerDepth / 2 - d.t / 2]));

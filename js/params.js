@@ -9,6 +9,8 @@ export const PARAM_DEFS = [
   { key: 'tube_OD',          group: 'Optical tube', label: 'Tube outside dia',   min: 4,   max: 30,  step: 0.25, value: 10,    unit: 'in' },
   { key: 'tube_length',      group: 'Optical tube', label: 'Tube length (L)',    min: 18,  max: 96,  step: 0.5,  value: 48,    unit: 'in' },
   { key: 'plywood_thickness',group: 'Optical tube', label: 'Plywood thickness',  min: 0.25,max: 1,   step: 0.25, value: 0.5,   unit: 'in' },
+  { key: 'base_thickness',   group: 'Optical tube', label: 'Rocker base thickness', min: 0.25,max: 1, step: 0.25, value: 0.5, unit: 'in' },
+  { key: 'ground_thickness', group: 'Optical tube', label: 'Ground board thickness',min: 0.25,max: 1, step: 0.25, value: 0.5, unit: 'in' },
   // Altitude bearing
   { key: 'bearing_diameter', group: 'Altitude bearing', label: 'Altitude bearing dia',min: 4,  max: 30,  step: 0.25, value: 16,    unit: 'in' },
   { key: 'bearing_width',    group: 'Altitude bearing', label: 'Bearing width',      min: 0.5, max: 4,   step: 0.25, value: 1,     unit: 'in' },

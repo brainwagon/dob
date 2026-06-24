@@ -109,7 +109,8 @@ export function deriveDimensions(p) {
   if (frontH <= 0)
     warnings.push(`Front board height is ${frontH.toFixed(2)}" — front board gone, rigidity lost.`);
 
-  return { D, t, L, Rb, theta, margin, pf, Lc, axisAboveTop, Hside, axisHeight, frontH,
+  const tBase = p.base_thickness, tGround = p.ground_thickness;
+  return { D, t, tBase, tGround, L, Rb, theta, margin, pf, Lc, axisAboveTop, Hside, axisHeight, frontH,
            cradleOuter, bearingSep, rockerInnerHalf, rockerInnerWidth, rockerDepth,
            rockerBottomRadius, groundRadius, azPadRadius, warnings };
 }
@@ -120,10 +121,11 @@ export function buildModel(p) {
   const t = d.t, D = d.D, parts = [];
   const ply = 0xc8a06a, woodDark = 0xb08850;
 
-  const board = (id, frame, profile, holes, position, rotation, color = ply) => {
-    const o = { id, kind: 'plywood', frame, profile, holes, thickness: t, position, rotation, color };
+  const board = (id, frame, profile, holes, position, rotation, color = ply, thickness = t) => {
+    const o = { id, kind: 'plywood', frame, profile, holes, thickness, position, rotation, color };
     parts.push(o); return o;
   };
+  const tBase = d.tBase, tGround = d.tGround;
 
   // --- Cradle (OTA frame): square box around the tube ---
   const bcr = p.bolt_circle_radius, br = CONSTANTS.bolt_clearance / 2;
@@ -163,7 +165,7 @@ export function buildModel(p) {
   // bottom edge grows tabs; the disk gets matching slot holes, co-generated so they align.
   const sideCenterX = d.rockerInnerHalf + t / 2;
   const TN = CONSTANTS.tab_count, TPH = 1;          // phase 1 → flush ends, tabs interior
-  const tab = { count: TN, phase: TPH, depth: t };  // tab depth = disk thickness
+  const tab = { count: TN, phase: TPH, depth: tBase }; // tab depth = disk (base) thickness
   const slots = [];
   // side↔front box joint: side front edge notched (box), front edges fingered (protrude),
   // opposite phases so they interlock. Only in box mode and where the front board exists.
@@ -184,7 +186,7 @@ export function buildModel(p) {
   // and protruding fingers on its left/right edges that fill the side notches (box mode).
   const frontZ = d.rockerDepth / 2 - t / 2, wi = d.rockerInnerWidth, fh = d.frontH;
   if (fh > 0) {
-    const fBottom = crenellate([-wi / 2, -fh / 2], [wi / 2, -fh / 2], [0, 1], TN, TPH, t, 'tab');
+    const fBottom = crenellate([-wi / 2, -fh / 2], [wi / 2, -fh / 2], [0, 1], TN, TPH, tBase, 'tab');
     const fRight = corner ? crenellate([wi / 2, -fh / 2], [wi / 2, fh / 2], [-1, 0], N, 1, t, 'tab') : [[wi / 2, fh / 2]];
     let fLeft;
     if (corner) { fLeft = crenellate([-wi / 2, -fh / 2], [-wi / 2, fh / 2], [1, 0], N, 1, t, 'tab'); fLeft.reverse(); }
@@ -193,9 +195,10 @@ export function buildModel(p) {
     board('rocker_front', 'az', fProfile, [], [0, fh / 2, frontZ], [0, 0, 0]);
     slots.push(...frontSlots(tabRanges(wi, TN, TPH), frontZ, t));
   }
-  // bottom disk — pivot hole + the side/front tab slots
+  // bottom disk — pivot hole + the side/front tab slots. Its own (base) thickness; top
+  // face stays at the rocker floor (y=0), so it extends downward by tBase.
   board('rocker_bottom', 'az', circle(d.rockerBottomRadius),
-        [{ x: 0, y: 0, r: CONSTANTS.pivot_hole / 2 }, ...slots], [0, -t / 2, 0], [-Math.PI / 2, 0, 0]);
+        [{ x: 0, y: 0, r: CONSTANTS.pivot_hole / 2 }, ...slots], [0, -tBase / 2, 0], [-Math.PI / 2, 0, 0], ply, tBase);
 
   // teflon pad markers, TANGENT to the bearing at ±θ. The pad's inner face sits at
   // radius Rb (touching the bearing), so its centre is at Rb + padThk/2, and it's
@@ -208,21 +211,22 @@ export function buildModel(p) {
                  rotation: [-sgn * d.theta, 0, 0], color: 0xeeeeee });
 
   // --- Ground board (ground frame, fixed) ---
-  const gY = -t - CONSTANTS.pad_thickness;        // top of ground board
+  // Top of ground board sits below the rocker disk (thickness tBase) plus the azimuth pad.
+  const gY = -tBase - CONSTANTS.pad_thickness;    // top of ground board
   board('ground_board', 'ground', circle(d.groundRadius),
-        [{ x: 0, y: 0, r: CONSTANTS.pivot_hole / 2 }], [0, gY - t / 2, 0], [-Math.PI / 2, 0, 0]);
-  // azimuth teflon pad markers at 0.707R, 120°
+        [{ x: 0, y: 0, r: CONSTANTS.pivot_hole / 2 }], [0, gY - tGround / 2, 0], [-Math.PI / 2, 0, 0], ply, tGround);
+  // azimuth teflon pad markers at 0.707R, 120° (sit on the ground board, under the disk)
   for (let i = 0; i < 3; i++) {
     const a = i * 120 * deg, x = Math.cos(a) * d.azPadRadius, z = Math.sin(a) * d.azPadRadius;
     parts.push({ id: `azpad_${i}`, kind: 'marker', frame: 'ground', shape: 'box',
-                 size: [1, CONSTANTS.pad_thickness, 1], position: [x, gY - t - CONSTANTS.pad_thickness / 2 + t, z], color: 0xeeeeee });
+                 size: [1, CONSTANTS.pad_thickness, 1], position: [x, gY + CONSTANTS.pad_thickness / 2, z], color: 0xeeeeee });
   }
-  // 3 feet
+  // 3 feet (below the bottom face of the ground board)
   for (let i = 0; i < 3; i++) {
     const a = (i * 120 + 60) * deg, R = d.groundRadius * 0.85;
     parts.push({ id: `foot_${i}`, kind: 'cylinder', frame: 'ground', color: 0x444444,
                  radius: CONSTANTS.foot_radius, height: CONSTANTS.foot_height,
-                 position: [Math.cos(a) * R, gY - t - CONSTANTS.foot_height / 2, Math.sin(a) * R],
+                 position: [Math.cos(a) * R, gY - tGround - CONSTANTS.foot_height / 2, Math.sin(a) * R],
                  rotation: [0, 0, 0] });
   }
 
