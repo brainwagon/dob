@@ -141,6 +141,16 @@ own (a CAD kernel would have given it for free — see §8).
   cylinders. Revisit only if printable bearing geometry is ever pulled back in scope.
 - **Visualization (staged, see §8):** (1) 3D interactive model, (2) flat-parts preview,
   (3) 2D assembly drawing / UI polish later.
+- **Settings save/restore (2026-06-24).** Export the **design parameters only** (the
+  PARAM_DEFS + CHOICE_DEFS keys — *not* pose/visibility/display) as JSON, shaped
+  `{ "app": "dobsonian-designer", "parameters": {…} }`. The same JSON is **embedded in the
+  DXF zip** as `dobsonian-design.json`, so the zip reproduces its own design. Import reads
+  a standalone `.json` or extracts it from a dropped `.zip` (a minimal store-method zip
+  reader — no inflate). On import: reject if the `app` tag is wrong, clamp numerics to
+  slider ranges, accept only valid choice options, ignore unknown keys, default missing.
+  **No versioning** (personal tool): the `app` tag is a type guard, not a schema version.
+  *Open risk:* a future change to a parameter's **meaning/units under the same key** would
+  import silently-wrong — add a `schemaVersion` gate if that ever happens (see §10).
 
 ---
 
@@ -192,6 +202,8 @@ output consistently.
 ## 10. Open items / deferred
 
 - **STL export** — shelved 2026-06-23 (see §7); bearings stay placeholder cylinders.
+- **Settings schema versioning** — deferred 2026-06-24 (see §7). Add a `schemaVersion`
+  gate only when a parameter's meaning/units change under an existing key.
 - **Kerf compensation** — deferred.
 - **finger_allowance = 0** — real assembly needs a small allowance; revisit before cutting.
 - **Mass-based balance / CG** — deferred; using `balance_point` % input instead.

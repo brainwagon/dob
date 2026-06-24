@@ -31,7 +31,11 @@ The optical/tube math (aperture, focal length, spacing) is assumed solved elsewh
 - **3D viewer** — orbit, swing the altitude/azimuth, per-group visibility toggles, and a
   "distinct part colors" mode to make the interlocking joints obvious.
 - **DXF export** — one R12 DXF per plywood part (outlines, bolt/pivot holes, tab slots,
-  altitude-center markers), bundled into a single `.zip`. Units are inches.
+  altitude-center markers), bundled into a single `.zip`. Units are inches. The zip also
+  carries an embedded `dobsonian-design.json` so the design that produced it is recoverable.
+- **Save / restore** — export the design parameters as a `.json`, and re-import later from
+  that file or by dropping the DXF `.zip` onto the 3D view. Imported values are validated
+  and clamped to range; only the design parameters are stored (not view state).
 - **Persistence** — parameters, pose, visibility, and display options are saved to
   `localStorage` and restored on reload.
 

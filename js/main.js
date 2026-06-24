@@ -5,7 +5,7 @@ import { PARAM_DEFS, CHOICE_DEFS, PARAM_GROUPS, HELP, defaultParams } from './pa
 import { buildModel } from './geometry.js';
 import { Viewer } from './viewer.js';
 import { partToDXF } from './dxf.js';
-import { zipStore } from './zip.js';
+import { zipStore, zipExtract } from './zip.js';
 
 const STORE_KEY = 'dob-designer-state';
 
@@ -81,21 +81,79 @@ function rebuild() {
     : `<div class="ok">✓ No geometry warnings</div>`;
 }
 
-// export: one DXF per plywood part, bundled into a zip
+// --- settings (design parameters only) export / import ---
+const APP_TAG = 'dobsonian-designer';
+const SETTINGS_NAME = 'dobsonian-design.json';
+const DESIGN_KEYS = [...PARAM_DEFS, ...CHOICE_DEFS].map(d => d.key);
+
+function settingsJSON() {
+  const parameters = {};
+  for (const k of DESIGN_KEYS) parameters[k] = params[k];
+  return JSON.stringify({ app: APP_TAG, parameters }, null, 2);
+}
+function download(name, data, type) {
+  const url = URL.createObjectURL(new Blob([data], { type }));
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  URL.revokeObjectURL(url);
+}
+// Apply imported design parameters: validate the tag, clamp numerics to slider ranges,
+// accept only valid choice options, ignore unknown keys / keep defaults for missing.
+function applyImported(obj) {
+  if (!obj || obj.app !== APP_TAG || typeof obj.parameters !== 'object')
+    throw new Error('not a Dobsonian Designer settings file');
+  const src = obj.parameters;
+  for (const def of PARAM_DEFS) {
+    const v = src[def.key];
+    if (typeof v === 'number' && isFinite(v)) params[def.key] = Math.min(def.max, Math.max(def.min, v));
+  }
+  for (const def of CHOICE_DEFS) if (def.options.includes(src[def.key])) params[def.key] = src[def.key];
+  refreshControls();
+  rebuild();
+  saveState();
+}
+async function importFromFile(file) {
+  try {
+    let text;
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      text = zipExtract(new Uint8Array(await file.arrayBuffer()), SETTINGS_NAME);
+      if (text == null) throw new Error('no settings found in zip');
+    } else {
+      text = await file.text();
+    }
+    applyImported(JSON.parse(text));
+    exportNote.textContent = `Imported ${file.name}.`;
+  } catch (err) {
+    exportNote.textContent = `Import failed: ${err.message}`;
+  }
+}
+
+// export / import UI
 const exportBox = document.getElementById('export');
-exportBox.innerHTML = `<button>Download DXF (.zip)</button><div class="note"></div>`;
-const exportBtn = exportBox.querySelector('button');
+exportBox.innerHTML = `<button id="dl-zip">Download DXF (.zip)</button>
+  <button id="dl-json" class="secondary">Export settings (.json)</button>
+  <button id="imp" class="secondary">Import settings…</button>
+  <input id="imp-file" type="file" accept=".json,.zip" hidden>
+  <div class="note"></div>`;
 const exportNote = exportBox.querySelector('.note');
-exportBtn.addEventListener('click', () => {
+exportBox.querySelector('#dl-zip').addEventListener('click', () => {
   const plywood = currentModel.parts.filter(p => p.kind === 'plywood');
   const files = plywood.map(p => ({ name: `${p.id}.dxf`, data: partToDXF(p) }));
-  const blob = new Blob([zipStore(files)], { type: 'application/zip' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'dobsonian-parts.zip'; a.click();
-  URL.revokeObjectURL(url);
-  exportNote.textContent = `${files.length} parts exported (inches, DXF R12).`;
+  files.push({ name: SETTINGS_NAME, data: settingsJSON() }); // embed design settings
+  download('dobsonian-parts.zip', zipStore(files), 'application/zip');
+  exportNote.textContent = `${plywood.length} parts + settings exported.`;
 });
+exportBox.querySelector('#dl-json').addEventListener('click', () => {
+  download(SETTINGS_NAME, settingsJSON(), 'application/json');
+  exportNote.textContent = 'Settings exported.';
+});
+const impFile = exportBox.querySelector('#imp-file');
+exportBox.querySelector('#imp').addEventListener('click', () => impFile.click());
+impFile.addEventListener('change', () => { if (impFile.files[0]) importFromFile(impFile.files[0]); impFile.value = ''; });
+// drag-and-drop a .json or .zip onto the 3D view
+const view = document.getElementById('view');
+view.addEventListener('dragover', e => e.preventDefault());
+view.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files[0]) importFromFile(e.dataTransfer.files[0]); });
 
 // display controls: distinct part colors + randomize
 const displayBox = document.getElementById('display');
@@ -117,6 +175,12 @@ for (const g of VIS_GROUPS) {
 }
 
 // parameter controls, rendered under group subheadings in PARAM_GROUPS order.
+// Element registries let an import refresh the UI to match the loaded params.
+const sliderEls = [], choiceEls = [];
+function refreshControls() {
+  for (const s of sliderEls) { s.input.value = params[s.def.key]; s.out.textContent = `${params[s.def.key]} ${s.def.unit}`; }
+  for (const c of choiceEls) c.sel.value = params[c.def.key];
+}
 function renderChoice(def) {
   const wrap = document.createElement('div');
   wrap.className = 'ctl';
@@ -126,6 +190,7 @@ function renderChoice(def) {
   const sel = wrap.querySelector('select');
   sel.addEventListener('change', () => { params[def.key] = sel.value; rebuild(); saveState(); });
   controls.appendChild(wrap);
+  choiceEls.push({ def, sel });
 }
 function renderSlider(def) {
   const wrap = document.createElement('div');
@@ -138,6 +203,7 @@ function renderSlider(def) {
   input.addEventListener('input', () => { params[def.key] = +input.value; sync(); rebuild(); saveState(); });
   sync();
   controls.appendChild(wrap);
+  sliderEls.push({ def, input, out });
 }
 for (const group of PARAM_GROUPS) {
   const choices = CHOICE_DEFS.filter(d => d.group === group);

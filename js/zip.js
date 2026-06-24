@@ -17,6 +17,25 @@ const u32 = (a, v) => a.push(v & 0xFF, (v >>> 8) & 0xFF, (v >>> 16) & 0xFF, (v >
 const bytesOf = s => { const a = []; for (let i = 0; i < s.length; i++) a.push(s.charCodeAt(i) & 0xFF); return a; };
 const DOS_DATE = 0x21; // 1980-01-01, a valid placeholder
 
+// Read one file's text out of a "store" (uncompressed) zip by name. Walks the local file
+// headers only — no central directory, no inflate. Returns null if absent or compressed.
+export function zipExtract(bytes, name) {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const dec = new TextDecoder();
+  let o = 0;
+  while (o + 30 <= bytes.length && dv.getUint32(o, true) === 0x04034b50) {
+    const method = dv.getUint16(o + 8, true);
+    const size = dv.getUint32(o + 18, true);          // store: comp size == uncomp size
+    const nameLen = dv.getUint16(o + 26, true), extraLen = dv.getUint16(o + 28, true);
+    const nameStart = o + 30, dataStart = nameStart + nameLen + extraLen;
+    const fn = dec.decode(bytes.subarray(nameStart, nameStart + nameLen));
+    if (fn === name || fn.endsWith('/' + name))
+      return method === 0 ? dec.decode(bytes.subarray(dataStart, dataStart + size)) : null;
+    o = dataStart + size;
+  }
+  return null;
+}
+
 export function zipStore(files) {
   const out = [], central = [];
   let offset = 0;

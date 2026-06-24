@@ -36,8 +36,10 @@
     border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 11px; }
   #display button:hover { border-color: var(--accent); }
   #export button { width: 100%; background: var(--accent); color: #fff; border: none;
-    border-radius: 4px; padding: 8px; cursor: pointer; font-size: 12px; }
+    border-radius: 4px; padding: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px; }
   #export button:hover { filter: brightness(1.1); }
+  #export button.secondary { background: #2c333d; color: var(--txt); border: 1px solid var(--line); }
+  #export button.secondary:hover { border-color: var(--accent); filter: none; }
   #export .note { color: var(--mut); font-size: 11px; margin-top: 6px; }
   .d-row { display: flex; justify-content: space-between; padding: 2px 0; }
   .d-row span:last-child { color: var(--accent); font-variant-numeric: tabular-nums; }
