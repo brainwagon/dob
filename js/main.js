@@ -91,6 +91,11 @@ function settingsJSON() {
   for (const k of DESIGN_KEYS) parameters[k] = params[k];
   return JSON.stringify({ app: APP_TAG, parameters }, null, 2);
 }
+// filename-safe local timestamp, e.g. 2026-06-24_143007
+function timestamp() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
 function download(name, data, type) {
   const url = URL.createObjectURL(new Blob([data], { type }));
   const a = document.createElement('a');
@@ -140,7 +145,7 @@ exportBox.querySelector('#dl-zip').addEventListener('click', () => {
   const plywood = currentModel.parts.filter(p => p.kind === 'plywood');
   const files = plywood.map(p => ({ name: `${p.id}.dxf`, data: partToDXF(p) }));
   files.push({ name: SETTINGS_NAME, data: settingsJSON() }); // embed design settings
-  download('dobsonian-parts.zip', zipStore(files), 'application/zip');
+  download(`dobsonian-parts-${timestamp()}.zip`, zipStore(files), 'application/zip');
   exportNote.textContent = `${plywood.length} parts + settings exported.`;
 });
 exportBox.querySelector('#dl-json').addEventListener('click', () => {
