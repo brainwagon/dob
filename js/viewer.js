@@ -6,6 +6,29 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+// human-readable label for a hovered part
+const FR = { L: 'left', R: 'right' };
+function partLabel(u) {
+  const id = u.partId;
+  let name;
+  if (id === 'tube') name = 'Optical tube';
+  else if (id === 'axis_marker') name = 'Altitude axis';
+  else if (id.startsWith('bearing_')) name = `Altitude bearing (${FR[id.slice(-1)]})`;
+  else if (id.startsWith('cradle_side_')) name = `Cradle side (${FR[id.slice(-1)]})`;
+  else if (id === 'cradle_top') name = 'Cradle top';
+  else if (id === 'cradle_bottom') name = 'Cradle bottom';
+  else if (id.startsWith('rocker_side_')) name = `Rocker side (${FR[id.slice(-1)]})`;
+  else if (id === 'rocker_front') name = 'Rocker front board';
+  else if (id === 'rocker_bottom') name = 'Rocker base (disk)';
+  else if (id === 'ground_board') name = 'Ground board';
+  else if (id.startsWith('foot_')) name = 'Ground board foot';
+  else if (id.startsWith('altpad_')) name = 'Altitude Teflon pad';
+  else if (id.startsWith('azpad_')) name = 'Azimuth Teflon pad';
+  else name = id;
+  if (u.kind === 'plywood' && u.thickness) name += ` — ${u.thickness}″ ply`;
+  return name;
+}
+
 // map a part id to a visibility group
 export function groupOf(id) {
   if (id.startsWith('cradle')) return 'cradle';
@@ -48,9 +71,37 @@ export class Viewer {
     this.visibility = {};          // group → bool (default visible)
     this.colorMode = false;        // distinct per-part colors
     this.colorSeed = 0;
+
+    // hover tooltip: raycast under the cursor and label the part
+    this.raycaster = new THREE.Raycaster();
+    this.raycaster.params.Line.threshold = 0; // ignore the grid lines
+    this.pointer = new THREE.Vector2();
+    this.tip = document.createElement('div');
+    this.tip.className = 'part-tip';
+    this.tip.style.display = 'none';
+    document.body.appendChild(this.tip);
+    canvas.addEventListener('pointermove', e => this._hover(e));
+    canvas.addEventListener('pointerleave', () => { this.tip.style.display = 'none'; });
+
     this._resize();
     window.addEventListener('resize', () => this._resize());
     this._animate();
+  }
+
+  _hover(e) {
+    const r = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    this.pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const hits = this.raycaster.intersectObjects([this.ground, this.az], true);
+    const hit = hits.find(h => h.object.isMesh && h.object.visible && h.object.userData.partId);
+    if (!hit) { this.tip.style.display = 'none'; return; }
+    this.tip.textContent = partLabel(hit.object.userData);
+    this.tip.style.display = 'block';
+    // offset from cursor, nudged left near the right edge
+    const x = e.clientX + 14, w = this.tip.offsetWidth;
+    this.tip.style.left = (x + w > window.innerWidth ? e.clientX - w - 14 : x) + 'px';
+    this.tip.style.top = (e.clientY + 14) + 'px';
   }
 
   _resize() {
@@ -116,7 +167,7 @@ export class Viewer {
     const frame = { ground: this.ground, az: this.az, ota: this.ota };
     for (const part of model.parts) {
       const mesh = this._mesh(part);
-      mesh.userData = { group: groupOf(part.id), partId: part.id, kind: part.kind, baseColor: part.color };
+      mesh.userData = { group: groupOf(part.id), partId: part.id, kind: part.kind, baseColor: part.color, thickness: part.thickness };
       mesh.visible = this.visibility[mesh.userData.group] !== false;
       frame[part.frame].add(mesh);
     }
